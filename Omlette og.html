@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="ml">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ചോരും തോറും കോരാം!</title>
+  <style>
+    :root {
+      --bg-color: #0b132b;
+      --card-bg: #1c2541;
+      --text-color: #edf2f4;
+      --accent-color: #64dfdf;
+      --accent-hover: #48cae4;
+      --danger-color: #ff4d6d;
+      --intro-bg: linear-gradient(135deg, #0d3b66 0%, #0077b6 40%, #059669 80%, #10b981 100%);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: hidden;
+    }
+
+    .screen {
+      display: none;
+      width: 100%;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .screen.active {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* SCREEN 1: INTRO */
+    #screen-intro {
+      background: var(--intro-bg);
+      text-align: center;
+    }
+
+    .intro-card {
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 24px;
+      padding: 40px 25px;
+      max-width: 550px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+
+    .intro-title {
+      font-size: 2.2rem;
+      color: #64dfdf;
+      margin-bottom: 15px;
+      font-weight: 800;
+    }
+
+    .quote-box {
+      background: rgba(255, 255, 255, 0.08);
+      border-left: 4px solid #80ffdb;
+      padding: 18px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin: 20px 0 30px;
+      color: #e2e8f0;
+      font-style: italic;
+    }
+
+    .btn-start {
+      background: linear-gradient(90deg, #56ab2f 0%, #a8e063 100%);
+      color: #052e16;
+      font-size: 1.2rem;
+      font-weight: bold;
+      padding: 16px 36px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-start:hover {
+      transform: scale(1.05);
+    }
+
+    /* SCREEN 2: GAMEPLAY */
+    .game-container {
+      width: 100%;
+      max-width: 850px;
+      background-color: var(--card-bg);
+      border: 1px solid #3a5a40;
+      border-radius: 20px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header h2 {
+      text-align: center;
+      color: var(--accent-color);
+      font-size: 1.8rem;
+    }
+
+    .main-stage {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .main-stage { grid-template-columns: 1fr; }
+    }
+
+    .visual-area {
+      position: relative;
+      background: #0b132b;
+      border-radius: 16px;
+      border: 1px solid #3a5a40;
+      height: 380px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-end;
+      overflow: hidden;
+    }
+
+    .spoon-container {
+      position: absolute;
+      top: 15px;
+      right: 30px;
+      width: 100px;
+      height: 60px;
+      z-index: 10;
+      transform-origin: right center;
+      pointer-events: none;
+    }
+
+    .spoon-container.scoop-pour {
+      animation: pourAction 0.75s ease-in-out forwards;
+    }
+
+    @keyframes pourAction {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      30% { transform: translate(-80px, -10px) rotate(-20deg); }
+      60% { transform: translate(-120px, 40px) rotate(-70deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
+    }
+
+    .water-stream {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 8px;
+      height: 0;
+      background: linear-gradient(to bottom, #80ffdb, #48cae4);
+      border-radius: 4px;
+      opacity: 0;
+      z-index: 8;
+    }
+
+    .water-stream.pouring {
+      animation: streamFlow 0.4s 0.3s ease-in-out;
+    }
+
+    @keyframes streamFlow {
+      0% { height: 0; opacity: 1; }
+      50% { height: 210px; opacity: 1; }
+      100% { height: 210px; opacity: 0; }
+    }
+
+    .bottle-svg-wrapper {
+      position: relative;
+      width: 170px;
+      height: 330px;
+      margin-bottom: 10px;
+    }
+
+    /* Leak streams now get their width set dynamically via JS as holes widen */
+    .leak-stream {
+      position: absolute;
+      width: 3px;
+      background: rgba(128, 255, 219, 0.85);
+      opacity: 0;
+      transition: opacity 0.2s, width 0.3s ease;
+      border-radius: 2px;
+      z-index: 5;
+    }
+
+    .leak-1 { top: 120px; left: 22px; height: 180px; transform: rotate(18deg); }
+    .leak-2 { top: 160px; right: 22px; height: 140px; transform: rotate(-16deg); }
+    .leak-3 { top: 200px; left: 22px; height: 100px; transform: rotate(15deg); }
+    .leak-4 { top: 240px; right: 22px; height: 60px; transform: rotate(-12deg); }
+    .leak-5 { top: 275px; left: 25px; height: 30px; transform: rotate(20deg); }
+
+    .leak-active {
+      opacity: 1;
+      animation: leakFlicker 0.35s infinite alternate;
+    }
+
+    @keyframes leakFlicker {
+      0% { opacity: 0.65; }
+      100% { opacity: 1; }
+    }
+
+    .controls-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .stat-card {
+      background: #0b132b;
+      padding: 12px;
+      border-radius: 10px;
+      border: 1px solid #3a5a40;
+    }
+
+    .stat-card .label {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .stat-card .value {
+      font-size: 1.2rem;
+      font-weight: bold;
+      color: #ffffff;
+    }
+
+    .stat-card.warning .value {
+      color: var(--danger-color);
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    button.btn-action {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    .btn-add { background-color: var(--accent-color); color: #0b132b; }
+    .btn-stop { background-color: var(--danger-color); color: #ffffff; }
+    button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* SCREEN 3: END RESULT */
+    #screen-end {
+      background: radial-gradient(circle at center, #1c2541 0%, #0b132b 100%);
+    }
+
+    .end-card {
+      background: #1c2541;
+      border: 2px solid var(--accent-color);
+      border-radius: 24px;
+      padding: 35px 25px;
+      max-width: 500px;
+      width: 100%;
+      text-align: center;
+    }
+
+    .end-title {
+      font-size: 2rem;
+      color: #ff4d6d;
+      margin-bottom: 5px;
+    }
+
+    .badge-rank {
+      display: inline-block;
+      background: rgba(100, 223, 223, 0.2);
+      color: var(--accent-color);
+      border: 1px solid var(--accent-color);
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .funny-quote-area {
+      background: #0b132b;
+      border-left: 4px solid #ff4d6d;
+      padding: 15px;
+      border-radius: 10px;
+      margin: 15px 0;
+      color: #f1f5f9;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      font-style: italic;
+    }
+
+    .stats-summary {
+      text-align: left;
+      background: #0b132b;
+      padding: 15px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      line-height: 1.8;
+      margin-bottom: 20px;
+      border: 1px solid #3a5a40;
+    }
+
+    .thankyou-msg {
+      color: #e2e8f0;
+      font-size: 1.1rem;
+      font-weight: bold;
+      margin-bottom: 20px;
+    }
+
+    .btn-restart {
+      background: var(--accent-color);
+      color: #0b132b;
+      font-size: 1.1rem;
+      font-weight: bold;
+      padding: 14px 30px;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- SCREEN 1 -->
+  <div id="screen-intro" class="screen active">
+    <div class="intro-card">
+      <h1 class="intro-title">ചോരും തോറും കോരാം!💧</h1>
+      <div class="quote-box">
+        "ഈ രസകരമായ ചലഞ്ചിലേക്ക് ഏവർക്കും ഹൃദയം നിറഞ്ഞ സ്വാഗതം! നിങ്ങളുടെ കഴിവ് തെളിയിക്കാൻ തയ്യാറാണോ?"
+      </div>
+      <p style="color: #cbd5e1; margin-bottom: 25px;">
+        പൂർണ്ണമായും നിരർത്ഥകമായ ഒരു ഡിജിറ്റൽ പരീക്ഷണം. 5 ദ്വാരങ്ങളുള്ള കുപ്പിയിലേക്ക് 60 സെക്കൻഡിനുള്ളിൽ വെള്ളം കോരി നിറയ്ക്കുക! പക്ഷേ സൂക്ഷിക്കുക — ഓരോ 3 തവി കഴിയുമ്പോഴും ദ്വാരങ്ങൾ ഇരട്ടിക്കുകയോ കൂടുതൽ വീതിയാകുകയോ ചെയ്യും!
+      </p>
+      <button class="btn-start" id="startBtn">തുടങ്ങാം (Start Challenge) 🚀</button>
+    </div>
+  </div>
+
+  <!-- SCREEN 2 -->
+  <div id="screen-game" class="screen">
+    <div class="game-container">
+      <header>
+        <h2>ചോരും തോറും കോരാം! 🥄💧</h2>
+      </header>
+
+      <div class="main-stage">
+        <div class="visual-area">
+          <div class="spoon-container" id="spoon">
+            <svg width="90" height="40" viewBox="0 0 100 40">
+              <path d="M 5,20 Q 25,35 45,20 Q 25,5 5,20 Z" fill="#94a3b8" stroke="#cbd5e1" stroke-width="2"/>
+              <path d="M 45,20 L 95,20" stroke="#cbd5e1" stroke-width="5" stroke-linecap="round"/>
+              <path d="M 10,20 Q 25,30 40,20 Q 25,12 10,20 Z" fill="#80ffdb"/>
+            </svg>
+          </div>
+
+          <div class="water-stream" id="waterStream"></div>
+
+          <div class="bottle-svg-wrapper">
+            <svg width="170" height="330" viewBox="0 0 170 330">
+              <defs>
+                <clipPath id="bottle-inner">
+                  <path d="M 65,15 L 105,15 L 105,50 L 145,90 L 145,310 Q 145,320 135,320 L 35,320 Q 25,320 25,310 L 25,90 L 65,50 Z" />
+                </clipPath>
+                <linearGradient id="waterGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stop-color="#80ffdb" />
+                  <stop offset="100%" stop-color="#0077b6" />
+                </linearGradient>
+              </defs>
+
+              <g clip-path="url(#bottle-inner)">
+                <rect id="waterLevel" x="0" y="320" width="170" height="0" fill="url(#waterGradient)"/>
+              </g>
+
+              <path d="M 65,15 L 105,15 L 105,50 L 145,90 L 145,310 Q 145,320 135,320 L 35,320 Q 25,320 25,310 L 25,90 L 65,50 Z" 
+                    fill="none" stroke="#64dfdf" stroke-width="4" opacity="0.85"/>
+              
+              <rect x="60" y="8" width="50" height="7" fill="#64dfdf" rx="2"/>
+
+              <circle cx="25" cy="120" r="3.5" fill="#ff4d6d" />
+              <circle cx="145" cy="160" r="3.5" fill="#ff4d6d" />
+              <circle cx="25" cy="200" r="3" fill="#ff4d6d" />
+              <circle cx="145" cy="240" r="3" fill="#ff4d6d" />
+              <circle cx="27" cy="275" r="2.5" fill="#ff4d6d" />
+            </svg>
+
+            <div class="leak-stream leak-1" id="leak1"></div>
+            <div class="leak-stream leak-2" id="leak2"></div>
+            <div class="leak-stream leak-3" id="leak3"></div>
+            <div class="leak-stream leak-4" id="leak4"></div>
+            <div class="leak-stream leak-5" id="leak5"></div>
+          </div>
+        </div>
+
+        <div class="controls-stats">
+          <div class="stat-grid">
+            <div class="stat-card">
+              <span class="label">തവി അളവ് (Spoons)</span>
+              <span class="value" id="spoonCount">0</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">ദ്വാരങ്ങൾ</span>
+              <span class="value" id="holeCount">5</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">പോയ സമയം</span>
+              <span class="value" id="timeTimer">0s</span>
+            </div>
+            <div class="stat-card warning">
+              <span class="label">ബാക്കി സമയം</span>
+              <span class="value" id="timeLeft">60s</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">ചോർന്നുപോയത്</span>
+              <span class="value" id="leakedAmount">0 ml</span>
+            </div>
+            <div class="stat-card">
+              <span class="label">നിലവിലുള്ള വെള്ളം</span>
+              <span class="value" id="currentWater">0 ml</span>
+            </div>
+          </div>
+
+          <div style="background: #0b132b; padding: 10px; border-radius: 8px; border: 1px solid #3a5a40; font-size: 0.85rem; color: #94a3b8;" id="hintBox">
+            💡 കുപ്പിയിൽ <strong>5 ദ്വാരങ്ങളുണ്ട്!</strong> 60 സെക്കൻഡിനുള്ളിൽ നിറയ്ക്കാൻ വേഗത്തിൽ കോരി ഒഴിക്കുക.
+          </div>
+
+          <div class="btn-group">
+            <button class="btn-action btn-add" id="addBtn">🥄 കോരി ഒഴിക്കുക</button>
+            <button class="btn-action btn-stop" id="stopBtn" disabled>⏹️ മതിയാക്കാം</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 3 -->
+  <div id="screen-end" class="screen">
+    <div class="end-card">
+      <h2 class="end-title">അവസാന കണക്കെടുപ്പ് 📊</h2>
+      <div class="badge-rank" id="userTitle">പട്ടം: വിവരദോഷി</div>
+
+      <div class="funny-quote-area" id="funnyQuote"></div>
+      <div class="stats-summary" id="statsSummary"></div>
+
+      <div class="thankyou-msg">
+        "നിങ്ങളുടെ അമൂല്യമായ സമയം വെറുതെ കളഞ്ഞതിന് ഒത്തിരി നന്ദി! ❤️"
+      </div>
+
+      <button class="btn-restart" id="restartBtn">വീണ്ടും വെറുതെ സമയം കളയാം! 🔄</button>
+    </div>
+  </div>
+
+  <script>
+    // ===== State =====
+    let totalSpoons = 0;
+    let waterMl = 0;
+    let leakedMl = 0;
+    let secondsSpent = 0;
+    let timeRemaining = 60;
+    const TIME_LIMIT = 60;
+
+    let timerInterval = null;
+    let leakInterval = null;
+    let isRunning = false;
+    let gameEnded = false;
+
+    let doubledHoles = false;      // whether the one-time doubling has happened
+    let globalWidthMultiplier = 1; // how much wider all holes have become
+    let globalRateMultiplier = 1;  // how much faster all holes leak
+
+    const MAX_CAPACITY = 500;
+    const SPOON_VOLUME = 25;
+
+    let holes = []; // {leakEl, circleEl, minMl, rate, baseWidth}
+
+    function showScreen(screenId) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+
+    // ===== Hole management =====
+    function initHoles() {
+      const wrapper = document.querySelector('.bottle-svg-wrapper');
+      const circles = wrapper.querySelectorAll('svg circle');
+      const configs = [
+        { elId: 'leak1', minMl: 400, rate: 4.2 },
+        { elId: 'leak2', minMl: 320, rate: 3.0 },
+        { elId: 'leak3', minMl: 220, rate: 2.2 },
+        { elId: 'leak4', minMl: 120, rate: 1.5 },
+        { elId: 'leak5', minMl: 50,  rate: 1.0 }
+      ];
+      configs.forEach((cfg, i) => {
+        holes.push({
+          leakEl: document.getElementById(cfg.elId),
+          circleEl: circles[i],
+          minMl: cfg.minMl,
+          rate: cfg.rate,
+          baseWidth: 3
+        });
+      });
+    }
+
+    function createHole(cfg) {
+      const wrapper = document.querySelector('.bottle-svg-wrapper');
+      const svg = wrapper.querySelector('svg');
+
+      const div = document.createElement('div');
+      div.className = 'leak-stream';
+      div.style.top = cfg.top + 'px';
+      div.style[cfg.side] = cfg.sidePos + 'px';
+      div.style.height = cfg.height + 'px';
+      div.style.transform = 'rotate(' + cfg.rot + 'deg)';
+      wrapper.appendChild(div);
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      const cx = cfg.side === 'left' ? cfg.sidePos + 2 : cfg.sidePos - 2;
+      circle.setAttribute('cx', cx);
+      circle.setAttribute('cy', cfg.top);
+      circle.setAttribute('r', 3);
+      circle.setAttribute('fill', '#ff4d6d');
+      svg.appendChild(circle);
+
+      holes.push({
+        leakEl: div,
+        circleEl: circle,
+        minMl: cfg.minMl,
+        rate: cfg.rate,
+        baseWidth: 3
+      });
+    }
+
+    function updateHint(msg) {
+      const hintBox = document.getElementById('hintBox');
+      if (hintBox) hintBox.innerHTML = '💡 ' + msg;
+    }
+
+    // Called every 3 pours: first time doubles the hole count, every time after that
+    // the existing holes just get wider (and leak faster).
+    function escalateLeaks() {
+      if (!doubledHoles) {
+        doubledHoles = true;
+        const newHoles = [
+          { top: 95,  side: 'right', sidePos: 22, height: 215, rot: -22, minMl: 380, rate: 3.6 },
+          { top: 135, side: 'left',  sidePos: 22, height: 165, rot: 19,  minMl: 300, rate: 2.6 },
+          { top: 175, side: 'right', sidePos: 22, height: 125, rot: -15, minMl: 190, rate: 1.9 },
+          { top: 215, side: 'left',  sidePos: 22, height: 85,  rot: 14,  minMl: 90,  rate: 1.3 },
+          { top: 250, side: 'right', sidePos: 22, height: 50,  rot: -19, minMl: 30,  rate: 0.9 }
+        ];
+        newHoles.forEach(createHole);
+        updateHint('ദ്വാരങ്ങൾ ഇരട്ടിയായി! ഇപ്പോൾ ' + holes.length + ' ദ്വാരങ്ങൾ 😱 വേഗം കൂട്ടൂ!');
+      } else {
+        globalWidthMultiplier *= 1.3;
+        globalRateMultiplier *= 1.3;
+        updateHint('ദ്വാരങ്ങൾ കൂടുതൽ വീതിയായി! ചോർച്ച ശക്തമായി 💦');
+      }
+      document.getElementById('holeCount').innerText = holes.length;
+    }
+
+    function updateUI() {
+      document.getElementById('spoonCount').innerText = totalSpoons;
+      document.getElementById('currentWater').innerText = Math.round(waterMl) + ' ml';
+      document.getElementById('leakedAmount').innerText = Math.round(leakedMl) + ' ml';
+      document.getElementById('holeCount').innerText = holes.length;
+
+      const heightPx = (waterMl / MAX_CAPACITY) * 305;
+      const yPos = 320 - heightPx;
+      const waterLevelEl = document.getElementById('waterLevel');
+      waterLevelEl.setAttribute('y', yPos);
+      waterLevelEl.setAttribute('height', heightPx);
+    }
+
+    function startSimulation() {
+      if (isRunning || gameEnded) return;
+      isRunning = true;
+      document.getElementById('stopBtn').disabled = false;
+
+      timerInterval = setInterval(() => {
+        secondsSpent++;
+        timeRemaining--;
+        document.getElementById('timeTimer').innerText = secondsSpent + 's';
+        document.getElementById('timeLeft').innerText = Math.max(0, timeRemaining) + 's';
+
+        if (timeRemaining <= 0) {
+          endGame('timeup');
+        }
+      }, 1000);
+
+      leakInterval = setInterval(() => {
+        let totalLeakRate = 0;
+
+        holes.forEach(h => {
+          if (waterMl > h.minMl) {
+            h.leakEl.classList.add('leak-active');
+            h.leakEl.style.width = (h.baseWidth * globalWidthMultiplier) + 'px';
+            totalLeakRate += h.rate * globalRateMultiplier;
+          } else {
+            h.leakEl.classList.remove('leak-active');
+          }
+        });
+
+        if (totalLeakRate > 0 && waterMl > 0) {
+          const actualLeak = Math.min(waterMl, totalLeakRate * 0.2);
+          waterMl -= actualLeak;
+          leakedMl += actualLeak;
+          updateUI();
+        }
+      }, 100);
+    }
+
+    function addWater() {
+      if (gameEnded) return;
+      startSimulation();
+
+      const spoonEl = document.getElementById('spoon');
+      const streamEl = document.getElementById('waterStream');
+
+      spoonEl.classList.remove('scoop-pour');
+      void spoonEl.offsetWidth;
+      spoonEl.classList.add('scoop-pour');
+
+      streamEl.classList.remove('pouring');
+      void streamEl.offsetWidth;
+      streamEl.classList.add('pouring');
+
+      setTimeout(() => {
+        if (gameEnded) return;
+
+        totalSpoons++;
+        waterMl = Math.min(MAX_CAPACITY, waterMl + SPOON_VOLUME);
+        updateUI();
+
+        if (totalSpoons % 3 === 0) {
+          escalateLeaks();
+        }
+
+        if (waterMl >= MAX_CAPACITY) {
+          endGame('filled');
+        }
+      }, 350);
+    }
+
+    function stopProcedure() {
+      endGame('manual');
+    }
+
+    // Central place where the game ends, whatever the reason.
+    function endGame(reason) {
+      if (gameEnded) return;
+      gameEnded = true;
+      isRunning = false;
+
+      clearInterval(timerInterval);
+      clearInterval(leakInterval);
+
+      document.getElementById('addBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = true;
+
+      holes.forEach(h => h.leakEl.classList.remove('leak-active'));
+
+      const totalPoured = totalSpoons * SPOON_VOLUME;
+
+      let reasonNote = '';
+      if (reason === 'filled') reasonNote = '🎉 കുപ്പി പൂർണ്ണമായി നിറഞ്ഞു! ';
+      else if (reason === 'timeup') reasonNote = '⏰ 60 സെക്കൻഡ് സമയം തീർന്നു! ';
+
+      document.getElementById('statsSummary').innerHTML =
+        '⏱️ <strong>കളഞ്ഞ കുളമാക്കിയ സമയം:</strong> ' + secondsSpent + ' സെക്കൻഡ്<br>' +
+        '🥄 <strong>വെറുതെ കുത്തിയ തവികൾ:</strong> ' + totalSpoons + ' തവണ<br>' +
+        '🕳️ <strong>അവസാനം ഉണ്ടായിരുന്ന ദ്വാരങ്ങൾ:</strong> ' + holes.length + '<br>' +
+        '💧 <strong>മുകളിൽ ഒഴിച്ച വെള്ളം:</strong> ' + totalPoured + ' ml<br>' +
+        '🌊 <strong>അടിയിലൂടെ പോയ വെള്ളം:</strong> ' + Math.round(leakedMl) + ' ml<br>' +
+        '🫙 <strong>കുപ്പിയിൽ മിച്ചമുള്ളത്:</strong> ' + Math.round(waterMl) + ' ml';
+
+      const userTitle = document.getElementById('userTitle');
+      const funnyQuote = document.getElementById('funnyQuote');
+
+      let title = '';
+      let quote = '';
+
+      if (reason === 'filled') {
+        title = "പട്ടം: സാക്ഷാൽ തവി രാക്ഷസൻ 👑";
+        quote = "“ദ്വാരങ്ങൾ ഇരട്ടിച്ചിട്ടും വീതിയായിട്ടും കുപ്പി നിറച്ചു! നിങ്ങളുടെ ഈ ഭ്രാന്തൻ സ്പീഡിന് മുന്നിൽ ഞാൻ കൈകൂപ്പുന്നു!”";
+      } else if (reason === 'timeup' && waterMl < MAX_CAPACITY * 0.25) {
+        title = "പട്ടം: സമയം കൊന്ന മടിയൻ ⏳";
+        quote = "“60 സെക്കൻഡ് കൊണ്ട് ഇത്രയേ ഒഴിച്ചുള്ളൂ? ദ്വാരങ്ങളെക്കാൾ വേഗത കുറഞ്ഞ കൈ!”";
+      } else if (secondsSpent < 6) {
+        title = "പട്ടം: വിവരം വച്ച വിരുതൻ 🧠";
+        quote = "“സംഭവം പണിയാണെന്ന് പെട്ടെന്ന് മനസ്സിലാക്കി ഊരിപ്പോയ ബുദ്ധിമാൻ!”";
+      } else if (leakedMl > totalPoured * 0.75) {
+        title = "പട്ടം: മഹാ മണ്ടൻ 🤡";
+        quote = "“ഒഴിച്ചതിന്റെ 75% വെള്ളവും തറയിലായി! വീട്ടുകാർ കണ്ടാൽ തല്ലി പുറത്താക്കും!”";
+      } else if (totalSpoons > 30) {
+        title = "പട്ടം: അപാര തൊലിക്കട്ടി 🐢";
+        quote = "“ഇരട്ടിച്ച ദ്വാരങ്ങളുള്ള ഈ ചോരുന്ന കുപ്പിയിൽ ഇത്രയും നേരം വെള്ളമൊഴിക്കാൻ കാണിച്ച ആ മനോധൈര്യം സമ്മതിക്കണം!”";
+      } else {
+        title = "പട്ടം: നിരർത്ഥക ജീവി 👻";
+        quote = "“നിങ്ങളുടെ ജീവിതത്തിലെ അമൂല്യമായ കുറച്ചു സെക്കൻഡുകൾ ഇതാ വിജയകരമായി പാഴാക്കി കഴിഞ്ഞിരിക്കുന്നു!”";
+      }
+
+      userTitle.innerText = title;
+      funnyQuote.innerText = reasonNote + quote;
+
+      showScreen('screen-end');
+    }
+
+    function resetAndRestart() {
+      isRunning = false;
+      gameEnded = false;
+
+      clearInterval(timerInterval);
+      clearInterval(leakInterval);
+
+      totalSpoons = 0;
+      waterMl = 0;
+      leakedMl = 0;
+      secondsSpent = 0;
+      timeRemaining = TIME_LIMIT;
+      doubledHoles = false;
+      globalWidthMultiplier = 1;
+      globalRateMultiplier = 1;
+
+      // Remove any holes added during the previous run, keep only the original 5
+      while (holes.length > 5) {
+        const h = holes.pop();
+        h.leakEl.remove();
+        h.circleEl.remove();
+      }
+      holes.forEach(h => {
+        h.leakEl.classList.remove('leak-active');
+        h.leakEl.style.width = '';
+      });
+
+      document.getElementById('timeTimer').innerText = '0s';
+      document.getElementById('timeLeft').innerText = TIME_LIMIT + 's';
+      document.getElementById('spoonCount').innerText = '0';
+      document.getElementById('leakedAmount').innerText = '0 ml';
+      document.getElementById('currentWater').innerText = '0 ml';
+      document.getElementById('holeCount').innerText = holes.length;
+      document.getElementById('addBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+
+      updateHint('കുപ്പിയിൽ <strong>5 ദ്വാരങ്ങളുണ്ട്!</strong> ഓരോ 3 തവി കഴിയുമ്പോഴും ദ്വാരങ്ങൾ കൂടുതൽ അപകടകാരിയാകും. 60 സെക്കൻഡിനുള്ളിൽ നിറയ്ക്കുക!');
+
+      updateUI();
+      showScreen('screen-intro');
+    }
+
+    // ===== Init & Event Listeners =====
+    initHoles();
+
+    document.getElementById('startBtn').addEventListener('click', function () { showScreen('screen-game'); });
+    document.getElementById('addBtn').addEventListener('click', addWater);
+    document.getElementById('stopBtn').addEventListener('click', stopProcedure);
+    document.getElementById('restartBtn').addEventListener('click', resetAndRestart);
+  </script>
+</body>
+</html>
